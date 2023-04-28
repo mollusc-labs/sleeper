@@ -141,7 +141,8 @@ func (s *Sleeper) fetch(method string, location string, body []byte, query map[s
 
 	if response.StatusCode >= 400 {
 		// https://docs.couchdb.org/en/stable/api/basics.html#http-status-codes
-		return nil, errors.New(string(*response_body)) // CouchDB provides fairly helpful errors
+		return &CouchResponse{body: response_body, headers: &response.Header},
+			errors.New(string(*response_body)) // CouchDB provides fairly helpful errors
 	}
 
 	return &CouchResponse{body: response_body, headers: &response.Header}, nil
@@ -206,7 +207,7 @@ func (s *Sleeper) Find(view string, query map[string]interface{}) (*CouchRespons
 		}
 	}
 
-	return s.fetch("GET", "", nil, sanitized_query)
+	return s.fetch("GET", "_find", nil, sanitized_query)
 }
 
 func (s *Sleeper) Mango(query string) (*CouchResponse, error) {
