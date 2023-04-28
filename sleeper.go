@@ -156,11 +156,11 @@ func (s *Sleeper) fetch(method string, location string, body []byte, query map[s
 
 	if response.StatusCode >= 400 {
 		// https://docs.couchdb.org/en/stable/api/basics.html#http-status-codes
-		return &CouchResponse{body: response_body, headers: &response.Header},
+		return &CouchResponse{Body: response_body, Headers: &response.Header},
 			errors.New(string(*response_body)) // CouchDB provides fairly helpful errors
 	}
 
-	return &CouchResponse{body: response_body, headers: &response.Header}, nil
+	return &CouchResponse{Body: response_body, Headers: &response.Header}, nil
 }
 
 func (s *Sleeper) Insert(data interface{}) (*CouchResponse, error) {
