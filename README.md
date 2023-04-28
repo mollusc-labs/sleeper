@@ -43,7 +43,7 @@ response, err := s.Find(`
         "title",
         "author"
     ]
-`)
+`, nil)
 
 b := Book{}
 err := json.Unmarshal(response.Body, &b)
