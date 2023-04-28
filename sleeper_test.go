@@ -17,6 +17,7 @@ package sleeper_test
 */
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/mollusc-labs/sleeper"
@@ -30,4 +31,34 @@ func TestNew(t *testing.T) {
 	if err != nil {
 		t.Error("Error should be nil")
 	}
+}
+
+func TestRunning(t *testing.T) {
+	a := sleeper.NewAuth("foo", "bar")                      // username, password
+	c := sleeper.NewConfig("http", 5984, 5000, "127.0.0.1") // protocol, port, timeout, host
+	s, _ := sleeper.New("posts", c, a)                      // posts is the DB for this sleeper instance
+
+	response, err := s.Find(`
+    "selector": {
+        "title": "Live And Let Die"
+    },
+    "fields": [
+        "title",
+        "author"
+    ]`, nil)
+
+	if err != nil {
+		t.Logf("%v\n", err)
+	}
+
+	b := Book{}
+	err = json.Unmarshal(*response.Body, &b)
+
+	t.Logf("Book is %v by %v\n", b.Title, b.Author)
+
+}
+
+type Book struct {
+	Title  string `json:"title"`
+	Author string `json:"author"`
 }

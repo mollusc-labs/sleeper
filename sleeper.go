@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 )
@@ -147,20 +148,23 @@ func (s *Sleeper) fetch(method string, location string, body []byte, query map[s
 		return nil, err
 	}
 
-	response_body := new(json.RawMessage)
-	_, err = response.Request.Body.Read(*response_body)
+	defer response.Body.Close()
+
+	t, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
 		return nil, err
 	}
 
+	response_body := json.RawMessage(t)
+
 	if response.StatusCode >= 400 {
 		// https://docs.couchdb.org/en/stable/api/basics.html#http-status-codes
-		return &CouchResponse{Body: response_body, Headers: &response.Header},
-			errors.New(string(*response_body)) // CouchDB provides fairly helpful errors
+		return &CouchResponse{Body: &response_body, Headers: &response.Header},
+			errors.New(string(response_body)) // CouchDB provides fairly helpful errors
 	}
 
-	return &CouchResponse{Body: response_body, Headers: &response.Header}, nil
+	return &CouchResponse{Body: &response_body, Headers: &response.Header}, nil
 }
 
 func (s *Sleeper) Insert(data interface{}) (*CouchResponse, error) {
@@ -210,19 +214,21 @@ func (s *Sleeper) Find(view string, query map[string]interface{}) (*CouchRespons
 	}
 
 	sanitized_query := make(map[string]string)
-	for k, v := range query {
-		if key_to_enclude(k) {
-			json, err := json.Marshal(v)
-			if err != nil {
-				return nil, errors.New(fmt.Sprintf("Could not marshal value with key %s", k))
+	if query != nil {
+		for k, v := range query {
+			if key_to_enclude(k) {
+				json, err := json.Marshal(v)
+				if err != nil {
+					return nil, errors.New(fmt.Sprintf("Could not marshal value with key %s", k))
+				}
+				sanitized_query[k] = string(json)
+			} else {
+				sanitized_query[k] = fmt.Sprintf("%v", v)
 			}
-			sanitized_query[k] = string(json)
-		} else {
-			sanitized_query[k] = fmt.Sprintf("%v", v)
 		}
 	}
 
-	return s.fetch("GET", "_find", nil, sanitized_query)
+	return s.fetch("GET", "_find", []byte(view), sanitized_query)
 }
 
 func (s *Sleeper) Mango(query string) (*CouchResponse, error) {
