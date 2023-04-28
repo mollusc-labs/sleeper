@@ -2,6 +2,12 @@
 
 A blazingly <i>lazy</i> CouchDB client implementation in Go.
 
+## Install
+
+```bash
+go get github.com/mollusc-labs/sleeper
+```
+
 ## How to use
 
 Sleeper is incredibly simple. First, make an auth and config struct,
