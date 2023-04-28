@@ -24,14 +24,25 @@ if err != nil {
 ```
 
 ```go
+type Book struct {
+    Title string  `json:"title"`
+    Author string `json:"author"`
+}
+
 response, err := s.Find(`
     "selector": {
         "title": "Live And Let Die"
     },
     "fields": [
-        "title"
+        "title",
+        "author"
     ]
 `)
+
+b := Book{}
+err := json.Unmarshal(response.Body, &b)
+
+fmt.Printf("Book is %v by %v\n", b.Title, b.Author)
 ```
 
 ## License

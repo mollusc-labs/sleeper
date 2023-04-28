@@ -44,8 +44,8 @@ type Auditable struct {
 }
 
 type CouchResponse struct {
-	body    *json.RawMessage
-	headers *http.Header
+	Body    *json.RawMessage
+	Headers *http.Header
 }
 
 type Config struct {
@@ -109,7 +109,6 @@ func New(db string, conf *Config, auth *Auth) (*Sleeper, error) {
 
 // Generalized fetch for all API calls
 func (s *Sleeper) fetch(method string, location string, body []byte, query map[string]string) (*CouchResponse, error) {
-
 	var request *http.Request
 	var err error
 	var uri *url.URL
