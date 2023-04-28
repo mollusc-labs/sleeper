@@ -1,6 +1,6 @@
 # Sleeper
 
-A blazingly <i>lazy</i> (let's call it simply beautiful) CouchDB client implementation in Go.
+A blazingly <i>lazy</i> CouchDB client implementation in Go.
 
 ## How to use
 
