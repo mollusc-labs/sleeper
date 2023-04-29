@@ -67,8 +67,8 @@ func (t *test_handler) ServeHTTP(io http.ResponseWriter, req *http.Request) {
 	io.Header().Add("content-type", "application/json; charset=utf8")
 }
 
-func TestParseDocs(t *testing.T) {
-	resp, _ := sleeper.ParseDocs[Foo]([]byte(test_json))
+func TestParse(t *testing.T) {
+	resp, _ := sleeper.Parse[Foo]([]byte(test_json))
 	t.Logf("%v\n", resp)
 	for _, v := range resp.Docs {
 		if v.Name != "foo" {
@@ -97,7 +97,7 @@ func TestFull(t *testing.T) {
 		t.Fatal("You need a CouchDB instance to fully test this module")
 	} else {
 		t.Logf("%v\n", string(*response.Body))
-		resp, _ := sleeper.ParseDocs[Foo](*response.Body)
+		resp, _ := sleeper.Parse[Foo](*response.Body)
 		t.Logf("%v\n", resp)
 
 		for _, v := range resp.Docs {

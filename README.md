@@ -30,11 +30,11 @@ if err != nil {
 ```
 
 Sleeper's `CouchResponse` is simply a cut-down HTTP response, it has the raw
-message as a `json.RawMessage` (`[]byte`) type, stored in `CouchResponse.Body` (which can be parsed via `sleeper.ParseDocs[T]`).
+message as a `json.RawMessage` (`[]byte`) type, stored in `CouchResponse.Body` (which can be parsed via `sleeper.Parse[T]`).
 It also has the headers of the response stored in `CouchResponse.Headers`.
 
 Body is kept as a `[]byte` because it makes it much more flexible to leave the data as data.
-If you really need to manipulate it you can use `sleeper.ParseDocs[T]`.
+If you really need to manipulate it you can use `sleeper.Parse[T]`.
 
 ```go
 type Book struct {
@@ -56,7 +56,7 @@ if err != nil {
     log.Fatal("Failed to query... :(")
 } else {
     fmt.Printf("%s\n", string(*response.Body))
-    parsed_response, _ := sleeper.ParseDocs[Book](*response.Body)
+    parsed_response, _ := sleeper.Parse[Book](*response.Body)
     for _, v := range parsed_response.Docs {
         fmt.Printf("Found book: %v by %v", v.Title, v.Author)
     }

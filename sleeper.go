@@ -115,7 +115,7 @@ type ParsedCouchResponse[T any] struct {
 	Bookmark string `json:"bookmark"`
 }
 
-func ParseDocs[T any](msg json.RawMessage) (*ParsedCouchResponse[T], error) {
+func Parse[T any](msg json.RawMessage) (*ParsedCouchResponse[T], error) {
 	m := ParsedCouchResponse[T]{}
 	err := json.Unmarshal(msg, &m)
 
