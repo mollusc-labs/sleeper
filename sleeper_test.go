@@ -17,7 +17,6 @@ package sleeper_test
 */
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/mollusc-labs/sleeper"
@@ -33,31 +32,20 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestRunning(t *testing.T) {
+func TestDoesNotDie(t *testing.T) {
 	a := sleeper.NewAuth("foo", "password")                 // username, password
 	c := sleeper.NewConfig("http", 5984, 5000, "127.0.0.1") // protocol, port, timeout, host
 	s, _ := sleeper.New("posts", c, a)                      // posts is the DB for this sleeper instance
 
-	response, err := s.Find(`{
+	response, err := s.Mango(`{
     "selector": {}, 
     "fields": [
         "name"
-    ]}`, nil)
+    ]}`)
 
 	if err != nil {
 		t.Logf("%v\n", err)
 	} else {
 		t.Logf("%v\n", string(*response.Body))
 	}
-
-	b := Book{}
-	err = json.Unmarshal(*response.Body, &b)
-
-	t.Logf("Book is %v by %v\n", b.Title, b.Author)
-
-}
-
-type Book struct {
-	Title  string `json:"title"`
-	Author string `json:"author"`
 }

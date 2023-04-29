@@ -35,7 +35,7 @@ type Book struct {
     Author string `json:"author"`
 }
 
-response, err := s.Find(`{
+response, err := s.Mango(`{
     "selector": {
         "title": "Live And Let Die"
     },
@@ -43,7 +43,7 @@ response, err := s.Find(`{
         "title",
         "author"
     ]
-}`, nil)
+}`)
 
 b := Book{}
 err := json.Unmarshal(response.Body, &b)
