@@ -23,8 +23,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 type Auth struct {
@@ -95,7 +97,7 @@ func New(db string, conf *Config, auth *Auth) (*Sleeper, error) {
 	s.headers = make(map[string]string)
 
 	s.headers["user-agent"] = "go-sleeper"
-	s.headers["content-type"] = "application/json"
+	s.headers["content-type"] = "application/json; charset=utf8"
 
 	if s.auth != nil {
 		auth_str := fmt.Sprintf("%s:%s", s.auth.user, s.auth.pass)
@@ -140,6 +142,10 @@ func (s *Sleeper) fetch(method string, location string, body []byte, query map[s
 
 	for k, v := range s.headers {
 		request.Header.Add(k, v)
+	}
+
+	if _, t := os.LookupEnv("SLEEPER_TRACE"); t {
+		log.Println(fmt.Sprintf("Sleeper log: \n %s %s \n %v \n %s", method, uri.String(), request.Header, string(body)))
 	}
 
 	response, err := http.DefaultClient.Do(request)
@@ -228,7 +234,7 @@ func (s *Sleeper) Find(view string, query map[string]interface{}) (*CouchRespons
 		}
 	}
 
-	return s.fetch("GET", "_find", []byte(view), sanitized_query)
+	return s.fetch("POST", "_find", []byte(view), sanitized_query)
 }
 
 func (s *Sleeper) Mango(query string) (*CouchResponse, error) {

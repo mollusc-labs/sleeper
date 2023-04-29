@@ -34,21 +34,20 @@ func TestNew(t *testing.T) {
 }
 
 func TestRunning(t *testing.T) {
-	a := sleeper.NewAuth("foo", "bar")                      // username, password
+	a := sleeper.NewAuth("foo", "password")                 // username, password
 	c := sleeper.NewConfig("http", 5984, 5000, "127.0.0.1") // protocol, port, timeout, host
 	s, _ := sleeper.New("posts", c, a)                      // posts is the DB for this sleeper instance
 
-	response, err := s.Find(`
-    "selector": {
-        "title": "Live And Let Die"
-    },
+	response, err := s.Find(`{
+    "selector": {}, 
     "fields": [
-        "title",
-        "author"
-    ]`, nil)
+        "name"
+    ]}`, nil)
 
 	if err != nil {
 		t.Logf("%v\n", err)
+	} else {
+		t.Logf("%v\n", string(*response.Body))
 	}
 
 	b := Book{}
