@@ -250,7 +250,7 @@ func (s *Sleeper) Find(view string, query map[string]interface{}) (*CouchRespons
 		}
 	}
 
-	return s.fetch("POST", fmt.Sprintf("/%s", view), nil, sanitized_query)
+	return s.fetch("GET", fmt.Sprintf("%s", view), nil, sanitized_query)
 }
 
 func (s *Sleeper) Mango(query string) (*CouchResponse, error) {
