@@ -29,6 +29,13 @@ if err != nil {
 }
 ```
 
+Sleeper's `CouchResponse` is simply a cut-down HTTP response, it has the raw
+message as a `json.RawMessage` (`[]byte`) type, stored in `CouchResponse.Body` (which can be parsed via `sleeper.ParseDocs[T]`).
+It also has the headers of the response stored in `CouchResponse.Headers`.
+
+Body is kept as a `[]byte` because it makes it much more flexible to leave the data as data.
+If you really need to manipulate it you can use `sleeper.ParseDocs[T]`.
+
 ```go
 type Book struct {
     Title string  `json:"title"`
