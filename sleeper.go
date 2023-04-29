@@ -110,6 +110,22 @@ func New(db string, conf *Config, auth *Auth) (*Sleeper, error) {
 	return s, nil
 }
 
+type ParsedCouchResponse[T any] struct {
+	Docs     []T    `json:"docs"`
+	Bookmark string `json:"bookmark"`
+}
+
+func ParseDocs[T any](msg json.RawMessage) (*ParsedCouchResponse[T], error) {
+	m := ParsedCouchResponse[T]{}
+	err := json.Unmarshal(msg, &m)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &m, nil
+}
+
 // Generalized fetch for all API calls
 func (s *Sleeper) fetch(method string, location string, body []byte, query map[string]string) (*CouchResponse, error) {
 	var request *http.Request

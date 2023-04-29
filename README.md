@@ -45,10 +45,15 @@ response, err := s.Mango(`{
     ]
 }`)
 
-b := Book{}
-err := json.Unmarshal(response.Body, &b)
-
-fmt.Printf("Book is %v by %v\n", b.Title, b.Author)
+if err != nil {
+    log.Fatal("Failed to query... :(")
+} else {
+    fmt.Printf("%s\n", string(*response.Body))
+    parsed_response, _ := sleeper.ParseDocs[Book](*response.Body)
+    for _, v := range parsed_response.Docs {
+        fmt.Printf("Found book: %v by %v", v.Title, v.Author)
+    }
+}
 ```
 
 ## License
