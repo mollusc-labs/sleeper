@@ -16,16 +16,16 @@ then inject it.
 ```go
 a := sleeper.NewAuth("foo", "bar") // username, password
 c := sleeper.NewConfig("http", 5984, 5000, "127.0.0.1") // protocol, port, timeout, host
-s, err := sleeper.New("posts", c, a) // posts is the DB for this sleeper instance
+s, err := sleeper.New(c, a)
 ```
 
 Then you can query the database or create your database, etc:
 
 ```go
-_, err := s.CreateDatabase()
+_, err := s.CreateDatabase("books")
 
 if err != nil {
-    log.Fatal("Couldn't create database :(")
+    log.Fatal("Couldn't create 'books' database :(")
 }
 ```
 
@@ -42,7 +42,7 @@ type Book struct {
     Author string `json:"author"`
 }
 
-response, err := s.Mango(`{
+response, err := s.Mango("books", `{
     "selector": {
         "title": "Live And Let Die"
     },

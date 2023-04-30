@@ -35,7 +35,7 @@ func TestNewConfig(t *testing.T) {
 func TestNew(t *testing.T) {
 	a := sleeper.NewAuth("foo", "bar")
 	c := sleeper.NewConfig("http", 5984, 5000, "127.0.0.1")
-	_, err := sleeper.New("posts", c, a)
+	_, err := sleeper.New(c, a)
 
 	if err != nil {
 		t.Error("Error should be nil")
@@ -85,9 +85,9 @@ func TestFull(t *testing.T) {
 
 	a := sleeper.NewAuth("foo", "password")                                                 // username, password
 	c := sleeper.NewConfig("http", uint16(l.Addr().(*net.TCPAddr).Port), 5000, "127.0.0.1") // protocol, port, timeout, host
-	s, _ := sleeper.New("posts", c, a)                                                      // posts is the DB for this sleeper instance
+	s, _ := sleeper.New(c, a)                                                               // posts is the DB for this sleeper instance
 
-	response, err := s.Mango(`{
+	response, err := s.Mango("posts", `{
     "selector": {}, 
     "fields": [
         "name"

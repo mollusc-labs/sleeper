@@ -61,7 +61,6 @@ type Config struct {
 type Sleeper struct {
 	auth    *Auth
 	config  *Config
-	db      string
 	headers map[string]string
 }
 
@@ -83,7 +82,7 @@ func NewAuth(user, pass string) *Auth {
 	return a
 }
 
-func New(db string, conf *Config, auth *Auth) (*Sleeper, error) {
+func New(conf *Config, auth *Auth) (*Sleeper, error) {
 	s := new(Sleeper)
 	// Auth can be nil, if it is, we simply don't use it later
 	s.auth = auth
@@ -105,8 +104,6 @@ func New(db string, conf *Config, auth *Auth) (*Sleeper, error) {
 		s.headers["authorization"] = fmt.Sprintf("Basic %s", base64_str)
 	}
 
-	s.db = db
-
 	return s, nil
 }
 
@@ -127,16 +124,20 @@ func Parse[T any](msg json.RawMessage) (*ParsedCouchResponse[T], error) {
 }
 
 // Generalized fetch for all API calls
-func (s *Sleeper) fetch(method string, location string, body []byte, query map[string]string) (*CouchResponse, error) {
+func (s *Sleeper) fetch(db, method, location string, body []byte, query map[string]string) (*CouchResponse, error) {
 	var request *http.Request
-	var err error
-	var uri *url.URL
 
-	if location == "" {
-		uri, err = url.Parse(fmt.Sprintf("%s://%s:%d/%s%s", s.config.protocol, s.config.host, s.config.port, s.db, location))
-	} else {
-		uri, err = url.Parse(fmt.Sprintf("%s://%s:%d/%s/%s", s.config.protocol, s.config.host, s.config.port, s.db, location))
+	raw_uri := fmt.Sprintf("%s://%s:%d", s.config.protocol, s.config.host, s.config.port)
+
+	if db != "" {
+		raw_uri += fmt.Sprintf("/%s", db)
 	}
+
+	if location != "" {
+		raw_uri += fmt.Sprintf("/%s", location)
+	}
+
+	uri, err := url.Parse(raw_uri)
 
 	if err != nil {
 		return nil, errors.New("Could not generate URI from configuration")
@@ -189,17 +190,17 @@ func (s *Sleeper) fetch(method string, location string, body []byte, query map[s
 	return &CouchResponse{Body: &response_body, Headers: &response.Header}, nil
 }
 
-func (s *Sleeper) Insert(data interface{}) (*CouchResponse, error) {
+func (s *Sleeper) Insert(db string, data interface{}) (*CouchResponse, error) {
 	json, err := json.Marshal(data)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return s.fetch("POST", "", json, nil)
+	return s.fetch(db, "POST", "", json, nil)
 }
 
-func (s *Sleeper) Update(data interface{}) (*CouchResponse, error) {
+func (s *Sleeper) Update(db string, data interface{}) (*CouchResponse, error) {
 	u, ok := data.(Auditable)
 
 	if !ok {
@@ -212,25 +213,25 @@ func (s *Sleeper) Update(data interface{}) (*CouchResponse, error) {
 		return nil, err
 	}
 
-	return s.fetch("PUT", fmt.Sprintf("%s", url.QueryEscape(u._id)), json, nil)
+	return s.fetch(db, "PUT", fmt.Sprintf("%s", url.QueryEscape(u._id)), json, nil)
 }
 
-func (s *Sleeper) Delete(id string, rev string) (*CouchResponse, error) {
+func (s *Sleeper) Delete(db, id, rev string) (*CouchResponse, error) {
 	query := make(map[string]string)
 	query["id"] = id
 	query["rev"] = rev
-	return s.fetch("DELETE", "", nil, query)
+	return s.fetch(db, "DELETE", "", nil, query)
 }
 
-func (s *Sleeper) CreateDatabase() (*CouchResponse, error) {
-	return s.fetch("PUT", "", nil, nil)
+func (s *Sleeper) CreateDatabase(db string) (*CouchResponse, error) {
+	return s.fetch(db, "PUT", "", nil, nil)
 }
 
-func (s *Sleeper) DropDatabase() (*CouchResponse, error) {
-	return s.fetch("DELETE", "", nil, nil)
+func (s *Sleeper) DropDatabase(db string) (*CouchResponse, error) {
+	return s.fetch(db, "DELETE", "", nil, nil)
 }
 
-func (s *Sleeper) Find(view string, query map[string]interface{}) (*CouchResponse, error) {
+func (s *Sleeper) Find(db, view string, query map[string]interface{}) (*CouchResponse, error) {
 	key_to_enclude := func(str string) bool {
 		return str == "key" || str == "keys" || str == "startkey" || str == "endkey"
 	}
@@ -250,21 +251,21 @@ func (s *Sleeper) Find(view string, query map[string]interface{}) (*CouchRespons
 		}
 	}
 
-	return s.fetch("GET", fmt.Sprintf("%s", view), nil, sanitized_query)
+	return s.fetch(db, "GET", fmt.Sprintf("%s", view), nil, sanitized_query)
 }
 
-func (s *Sleeper) Mango(query string) (*CouchResponse, error) {
-	return s.fetch("POST", "_find", []byte(query), nil)
+func (s *Sleeper) Mango(db, query string) (*CouchResponse, error) {
+	return s.fetch(db, "POST", "_find", []byte(query), nil)
 }
 
-func (s *Sleeper) MangoStruct(query interface{}) (*CouchResponse, error) {
+func (s *Sleeper) MangoStruct(db string, query interface{}) (*CouchResponse, error) {
 	json, err := json.Marshal(query)
 
 	if err != nil {
 		return nil, errors.New("Could not parse JSON from interface, maybe try Mango(string) instead")
 	}
 
-	return s.Mango(string(json))
+	return s.Mango(db, string(json))
 }
 
 func (s *Sleeper) NewUUID(count uint) ([]string, error) {
@@ -302,4 +303,16 @@ func (s *Sleeper) NewUUID(count uint) ([]string, error) {
 	}
 
 	return v["uuids"], nil
+}
+
+func (s *Sleeper) ListDatabases() ([]string, error) {
+	res, err := s.fetch("", "GET", "_all_dbs", nil, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var arr []string
+	_ = json.Unmarshal(*res.Body, &arr)
+	return arr, nil
 }
