@@ -51,6 +51,11 @@ type CouchResponse struct {
 	Headers *http.Header
 }
 
+type ParsedCouchDocumentResponse[T any] struct {
+	Docs     []T    `json:"docs"`
+	Bookmark string `json:"bookmark"`
+}
+
 type Config struct {
 	protocol Protocol
 	port     uint16
@@ -107,13 +112,11 @@ func New(conf *Config, auth *Auth) (*Sleeper, error) {
 	return s, nil
 }
 
-type ParsedCouchResponse[T any] struct {
-	Docs     []T    `json:"docs"`
-	Bookmark string `json:"bookmark"`
-}
-
-func Parse[T any](msg json.RawMessage) (*ParsedCouchResponse[T], error) {
-	m := ParsedCouchResponse[T]{}
+/*
+ * Attempts to parse a CouchDB response body to [ParsedCouchDocumentResponse]
+ */
+func Parse[T any](msg json.RawMessage) (*ParsedCouchDocumentResponse[T], error) {
+	m := ParsedCouchDocumentResponse[T]{}
 	err := json.Unmarshal(msg, &m)
 
 	if err != nil {
@@ -123,7 +126,6 @@ func Parse[T any](msg json.RawMessage) (*ParsedCouchResponse[T], error) {
 	return &m, nil
 }
 
-// Generalized fetch for all API calls
 func (s *Sleeper) fetch(db, method, location string, body []byte, query map[string]string) (*CouchResponse, error) {
 	var request *http.Request
 
@@ -190,7 +192,12 @@ func (s *Sleeper) fetch(db, method, location string, body []byte, query map[stri
 	return &CouchResponse{Body: &response_body, Headers: &response.Header}, nil
 }
 
-func (s *Sleeper) Insert(db string, data interface{}) (*CouchResponse, error) {
+/*
+ * Saves a document to the database. If there is a "_id" field in the interface
+ * CouchDB will update the document if it exists, otherwise it will generate a new
+ * document and use that id or generate a new id if no id is provided.
+ */
+func (s *Sleeper) Save(db string, data interface{}) (*CouchResponse, error) {
 	json, err := json.Marshal(data)
 
 	if err != nil {
@@ -200,6 +207,25 @@ func (s *Sleeper) Insert(db string, data interface{}) (*CouchResponse, error) {
 	return s.fetch(db, "POST", "", json, nil)
 }
 
+/*
+ * See [Save] but takes a list of documents to save
+ */
+func (s *Sleeper) SaveMany(db string, data []interface{}) (*CouchResponse, error) {
+	v := make(map[string][]interface{})
+	v["docs"] = data
+
+	json, err := json.Marshal(v)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return s.fetch(db, "POST", "bulk_docs", json, nil)
+}
+
+/*
+ * A more explicit save, this call will make sure the "_id" and "_rev" fields are included
+ */
 func (s *Sleeper) Update(db string, data interface{}) (*CouchResponse, error) {
 	u, ok := data.(Auditable)
 
@@ -223,14 +249,36 @@ func (s *Sleeper) Delete(db, id, rev string) (*CouchResponse, error) {
 	return s.fetch(db, "DELETE", "", nil, query)
 }
 
+/*
+ *	Deletes many documents based on a map of ids to a list of revisions
+ *  https://docs.couchdb.org/en/stable/api/database/misc.html
+ */
+func (s *Sleeper) DeleteMany(db string, ids_and_revisions map[string][]string) (*CouchResponse, error) {
+	json, err := json.Marshal(ids_and_revisions)
+	if err != nil {
+		return nil, errors.New("Couldn't JSONify (this should never happen)")
+	}
+
+	return s.fetch(db, "POST", "_purge", json, nil)
+}
+
+/*
+ * Attempts to create a database with a given name
+ */
 func (s *Sleeper) CreateDatabase(db string) (*CouchResponse, error) {
 	return s.fetch(db, "PUT", "", nil, nil)
 }
 
+/*
+ * Attempts to delete a database with a given name
+ */
 func (s *Sleeper) DropDatabase(db string) (*CouchResponse, error) {
 	return s.fetch(db, "DELETE", "", nil, nil)
 }
 
+/*
+ * Attempts to find a list of documents based on a query
+ */
 func (s *Sleeper) Find(db, view string, query map[string]interface{}) (*CouchResponse, error) {
 	key_to_enclude := func(str string) bool {
 		return str == "key" || str == "keys" || str == "startkey" || str == "endkey"
@@ -254,10 +302,16 @@ func (s *Sleeper) Find(db, view string, query map[string]interface{}) (*CouchRes
 	return s.fetch(db, "GET", fmt.Sprintf("%s", view), nil, sanitized_query)
 }
 
+/*
+ * Uses a Mango query to find documents
+ */
 func (s *Sleeper) Mango(db, query string) (*CouchResponse, error) {
 	return s.fetch(db, "POST", "_find", []byte(query), nil)
 }
 
+/*
+ * Takes a query that can be represented by a struct or map instead of a string
+ */
 func (s *Sleeper) MangoStruct(db string, query interface{}) (*CouchResponse, error) {
 	json, err := json.Marshal(query)
 
@@ -268,6 +322,9 @@ func (s *Sleeper) MangoStruct(db string, query interface{}) (*CouchResponse, err
 	return s.Mango(db, string(json))
 }
 
+/*
+ * Finds a list of [count] UUID's
+ */
 func (s *Sleeper) NewUUID(count uint) ([]string, error) {
 	if count < 1 {
 		return nil, errors.New("Can't find 0 uuids, count must be greater than 0")
@@ -305,6 +362,9 @@ func (s *Sleeper) NewUUID(count uint) ([]string, error) {
 	return v["uuids"], nil
 }
 
+/*
+ * Lists all databases on the CouchDB server
+ */
 func (s *Sleeper) ListDatabases() ([]string, error) {
 	res, err := s.fetch("", "GET", "_all_dbs", nil, nil)
 
