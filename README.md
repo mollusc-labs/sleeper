@@ -1,6 +1,8 @@
 # Sleeper
 
-A blazingly <i>lazy</i> CouchDB client implementation in Go.
+A blazingly <i>lazy</i> CouchDB client implementation in idiomatic Go. Sleeper
+tries its best to follow Data-Oriented Programming by keeping data retrieved and sent to
+CouchDB as `[]byte`, this allows for very simple and flexible usage and abstractions.
 
 ## Install
 
